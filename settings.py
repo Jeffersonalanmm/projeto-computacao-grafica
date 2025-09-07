@@ -12,7 +12,6 @@ MERGE_RULES = {
     ("Introdução à Programação I", "Introdução à Programação I"): ("Algoritmos e Estruturas de Dados I", 10),
     ("Algoritmos e Estruturas de Dados I", "Programação Orientada a Objetos"): ("Engenharia de Software I", 50),
     ("Álgebra Linear", "Algoritmos e Estruturas de Dados I"): ("Computação Gráfica", 50),
-    
 }
 
 COLORS = {

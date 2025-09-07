@@ -1,14 +1,29 @@
 import random
 from settings import BOARD_SIZE, BASIC_POOL, MERGE_RULES
 
+class Tile:
+    def __init__(self, x, y, value):
+        self.x = x
+        self.y = y
+        self.value = value
+        self.x_draw = float(x)
+        self.y_draw = float(y)
+        self.speed = 10 
+
+    def update(self, dt):
+        self.x_draw += (self.x - self.x_draw) * min(1, dt * self.speed)
+        self.y_draw += (self.y - self.y_draw) * min(1, dt * self.speed)
+
 def create_board():
     return [[None for _ in range(BOARD_SIZE)] for _ in range(BOARD_SIZE)]
 
-def spawn_tile(board):
+def spawn_tile(board, tiles):
     empty = [(i, j) for i in range(BOARD_SIZE) for j in range(BOARD_SIZE) if not board[i][j]]
     if empty:
         i, j = random.choice(empty)
-        board[i][j] = random.choice(BASIC_POOL)
+        value = random.choice(BASIC_POOL)
+        board[i][j] = value
+        tiles.append(Tile(j, i, value))
 
 def merge_line(line):
     new_line = [c for c in line if c is not None]
@@ -28,7 +43,7 @@ def merge_line(line):
         result.append(None)
     return result, score_gained
 
-def move(board, direction):
+def move(board, tiles, direction):
     moved = False
     total_score = 0
 
@@ -67,7 +82,13 @@ def move(board, direction):
             total_score += score
 
     if moved:
-        spawn_tile(board)
+        tiles.clear()
+        for r in range(BOARD_SIZE):
+            for c in range(BOARD_SIZE):
+                if board[r][c]:
+                    tiles.append(Tile(c, r, board[r][c]))
+        spawn_tile(board, tiles)
+
     return moved, total_score
 
 def is_game_over(board):
