@@ -4,8 +4,6 @@ from settings import TILE_SIZE, HEADER_HEIGHT, COLORS, MAX_FONT_SIZE, MIN_FONT_S
 font_cache = {}
 surface_cache = {}
 
-# No seu arquivo draw.py
-
 def draw_text_auto_fit(text, color, target_width, max_font=MAX_FONT_SIZE, min_font=MIN_FONT_SIZE):
     font_size = max_font
     
