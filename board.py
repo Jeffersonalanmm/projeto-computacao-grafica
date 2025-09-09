@@ -10,9 +10,13 @@ class Tile:
         self.y_draw = float(y)
         self.speed = 10 
 
+        self.scale = 0.0
+        self.animation_speed = 6.0
+
     def update(self, dt):
         self.x_draw += (self.x - self.x_draw) * min(1, dt * self.speed)
         self.y_draw += (self.y - self.y_draw) * min(1, dt * self.speed)
+        self.scale += (1.0 - self.scale) * self.animation_speed * dt
 
 def create_board():
     return [[None for _ in range(BOARD_SIZE)] for _ in range(BOARD_SIZE)]
