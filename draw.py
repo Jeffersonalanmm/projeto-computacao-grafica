@@ -1,16 +1,34 @@
 import pygame
 from settings import TILE_SIZE, HEADER_HEIGHT, COLORS, MAX_FONT_SIZE, MIN_FONT_SIZE
 
-def draw_text_auto_fit(screen, text, rect, color, max_font=MAX_FONT_SIZE, min_font=MIN_FONT_SIZE):
+font_cache = {}
+surface_cache = {}
+
+# No seu arquivo draw.py
+
+def draw_text_auto_fit(text, color, target_width, max_font=MAX_FONT_SIZE, min_font=MIN_FONT_SIZE):
     font_size = max_font
-    font = pygame.font.SysFont("Arial", font_size, bold=True)
-    text_surface = font.render(text, True, color)
-    while (text_surface.get_width() > rect.width - 10 or text_surface.get_height() > rect.height - 10) and font_size > min_font:
+    
+    while font_size >= min_font:
+        if font_size not in font_cache:
+            font_cache[font_size] = pygame.font.SysFont("Arial", font_size, bold=True)
+        font = font_cache[font_size]
+
+        text_width, _ = font.size(text)
+        if text_width < target_width - 10:
+            break
         font_size -= 1
-        font = pygame.font.SysFont("Arial", font_size, bold=True)
-        text_surface = font.render(text, True, color)
-    text_rect = text_surface.get_rect(center=rect.center)
-    screen.blit(text_surface, text_rect)
+
+    if font_size < min_font:
+        font_size = min_font
+
+    cache_key = (text, font_size, color)
+    
+    if cache_key not in surface_cache:
+        font = font_cache[font_size]
+        surface_cache[cache_key] = font.render(text, True, color)
+    
+    return surface_cache[cache_key]
 
 def draw_grid(screen, board):
     for y in range(len(board)):
@@ -38,6 +56,14 @@ def draw_board(screen, board, tiles, score, font, score_font, game_over=False):
         color = COLORS.get(tile.value, (200, 200, 200))
         pygame.draw.rect(screen, color, rect, border_radius=5)
         pygame.draw.rect(screen, (0, 0, 0), rect, 2, border_radius=5)
+        
+        text_surface = draw_text_auto_fit(tile.value, (255, 255, 255), TILE_SIZE)
+
+        alpha = max(0, min(255, 255 * tile.scale))
+        text_surface.set_alpha(alpha)
+        
+        text_rect = text_surface.get_rect(center=rect.center)
+        screen.blit(text_surface, text_rect)
 
     if game_over:
         overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
