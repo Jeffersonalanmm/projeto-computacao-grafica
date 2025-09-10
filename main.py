@@ -1,6 +1,6 @@
 import pygame
 import sys
-from board import create_board, spawn_tile, move, is_game_over
+from board import create_board, spawn_tile, move, is_game_over, are_animations_running
 from draw import draw_board
 from settings import WINDOW_SIZE, HEADER_HEIGHT
 
@@ -41,28 +41,29 @@ def run_game():
                 pygame.quit()
                 sys.exit()
             elif event.type == pygame.KEYDOWN:
-                if game_over:
-                    if event.key == pygame.K_ESCAPE:
-                        board, tiles, score = restart_game()
-                        game_over = False
-                else:
-                    if event.key in [pygame.K_UP, pygame.K_w]:
-                        moved, points = move(board, tiles, "up")
-                    elif event.key in [pygame.K_DOWN, pygame.K_s]:
-                        moved, points = move(board, tiles, "down")
-                    elif event.key in [pygame.K_LEFT, pygame.K_a]:
-                        moved, points = move(board, tiles, "left")
-                    elif event.key in [pygame.K_RIGHT, pygame.K_d]:
-                        moved, points = move(board, tiles, "right")
-                    elif event.key == pygame.K_ESCAPE:
-                        board, tiles, score = restart_game()
-                        continue
+                if not are_animations_running(tiles):
+                    if game_over:
+                        if event.key == pygame.K_ESCAPE:
+                            board, tiles, score = restart_game()
+                            game_over = False
                     else:
-                        moved = False
-                        points = 0
+                        if event.key in [pygame.K_UP, pygame.K_w]:
+                            moved, points = move(board, tiles, "up")
+                        elif event.key in [pygame.K_DOWN, pygame.K_s]:
+                            moved, points = move(board, tiles, "down")
+                        elif event.key in [pygame.K_LEFT, pygame.K_a]:
+                            moved, points = move(board, tiles, "left")
+                        elif event.key in [pygame.K_RIGHT, pygame.K_d]:
+                            moved, points = move(board, tiles, "right")
+                        elif event.key == pygame.K_ESCAPE:
+                            board, tiles, score = restart_game()
+                            continue
+                        else:
+                            moved = False
+                            points = 0
 
-                    if moved:
-                        score += points
+                        if moved:
+                            score += points
 
         for tile in tiles:
             tile.update(dt)
