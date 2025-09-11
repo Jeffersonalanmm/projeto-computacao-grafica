@@ -1,1 +1,26 @@
+<<<<<<< HEAD
 __pycache__/
+=======
+# Python cache
+__pycache__/
+*.pyc
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Builds / distribuições
+build/
+dist/
+*.egg-info/
+
+# Configurações de IDE
+.vscode/
+.idea/
+
+# Arquivos temporários
+*.log
+.DS_Store
+Thumbs.db
+>>>>>>> upstream/main
