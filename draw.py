@@ -29,17 +29,39 @@ def draw_text_auto_fit(text, color, target_width, max_font=MAX_FONT_SIZE, min_fo
     return surface_cache[cache_key]
 
 def draw_grid(screen, board):
-    for y in range(len(board)):
-        for x in range(len(board[y])):
-            rect = pygame.Rect(x * TILE_SIZE, HEADER_HEIGHT + y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-            pygame.draw.rect(screen, (50, 50, 50), rect)  
-            pygame.draw.rect(screen, (0, 0, 0), rect, 2)  
+    width, height = screen.get_size()
+    board_size = len(board)
+    header_height = int(height * 0.12)
+    # Limitar o tabuleiro a 90% da largura e 85% da altura útil
+    max_board_width = int(width * 0.9)
+    max_board_height = int((height - header_height) * 0.85)
+    tile_size = min(max_board_width // board_size, max_board_height // board_size)
+    board_pixel_width = tile_size * board_size
+    board_pixel_height = tile_size * board_size
+    offset_x = (width - board_pixel_width) // 2
+    offset_y = header_height + ((height - header_height) - board_pixel_height) // 2
+
+    for y in range(board_size):
+        for x in range(board_size):
+            rect = pygame.Rect(
+                offset_x + x * tile_size,
+                offset_y + y * tile_size,
+                tile_size,
+                tile_size
+            )
+            pygame.draw.rect(screen, (50, 50, 50), rect)
+            pygame.draw.rect(screen, (0, 0, 0), rect, 2)
 
 def draw_board(screen, board, tiles, score, font, score_font, game_over, music_on, icon_on, icon_off):
     screen.fill((30, 30, 30))
 
+    # Score
     score_text = score_font.render(f"Pontos: {score}", True, (255, 255, 255))
-    screen.blit(score_text, (10, 10))
+    score_x = offset_x
+    score_y = offset_y - score_text.get_height() - 10
+    if score_y < 5:
+        score_y = 5 
+    screen.blit(score_text, (score_x, score_y))
 
     music_button_rect = None
     if icon_on and icon_off: # Só desenha se os ícones foram carregados
@@ -62,25 +84,24 @@ def draw_board(screen, board, tiles, score, font, score_font, game_over, music_o
         screen.blit(icon_to_draw, music_button_rect)
     
 
+
     draw_grid(screen, board)
 
+    # Tiles
     for tile in tiles:
-        center_x = tile.x_draw * TILE_SIZE + TILE_SIZE / 2
-        center_y = HEADER_HEIGHT + tile.y_draw * TILE_SIZE + TILE_SIZE / 2
-        
-        current_size = TILE_SIZE * tile.scale
+        center_x = offset_x + tile.x_draw * tile_size + tile_size / 2
+        center_y = offset_y + tile.y_draw * tile_size + tile_size / 2
+        current_size = tile_size * tile.scale
         rect = pygame.Rect(0, 0, current_size, current_size)
         rect.center = (center_x, center_y)
 
         color = COLORS.get(tile.value, (200, 200, 200))
         pygame.draw.rect(screen, color, rect, border_radius=5)
         pygame.draw.rect(screen, (0, 0, 0), rect, 2, border_radius=5)
-        
-        text_surface = draw_text_auto_fit(tile.value, (255, 255, 255), TILE_SIZE)
 
+        text_surface = draw_text_auto_fit(tile.value, (255, 255, 255), tile_size)
         alpha = max(0, min(255, 255 * tile.scale))
         text_surface.set_alpha(alpha)
-        
         text_rect = text_surface.get_rect(center=rect.center)
         screen.blit(text_surface, text_rect)
 
