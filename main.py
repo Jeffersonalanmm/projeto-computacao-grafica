@@ -39,7 +39,7 @@ def calculate_responsive_sizes(width, height):
     return {
         'title_font_size': max(24, min_side // 10),
         'subtitle_font_size': max(12, min_side // 28),
-        'option_font_size': max(6, min_side // 24),
+        'option_font_size': max(14, min_side // 18),
         'spacing': max(10, height // 24),
         'title_y': height // 4,
         'button_width': max(120, width // 3),
@@ -258,15 +258,12 @@ def run_game():
         icon_size = (30, 30) 
         icon_on_img = pygame.image.load("icons/music_on.png").convert_alpha()
         icon_off_img = pygame.image.load("icons/music_off.png").convert_alpha()
-        restart_icon = pygame.image.load("icons/restart.png").convert_alpha()
         
         icon_on = pygame.transform.scale(icon_on_img, icon_size)
         icon_off = pygame.transform.scale(icon_off_img, icon_size)
-        icon_restart = pygame.transform.scale(restart_icon, icon_size)
-    
         icons_loaded = True
     except pygame.error:
-        print("⚠ Ícones não encontrados!")
+        print("⚠ Ícones de música não encontrados! O botão será desativado.")
         icons_loaded = False
 
     music_on = True
@@ -294,7 +291,6 @@ def run_game():
     animations_done = True
 
     music_button_rect = None
-    restart_button_rect = None
 
     while True:
         dt = clock.tick(60) / 1000
@@ -305,12 +301,8 @@ def run_game():
                 sys.exit()
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 # Só tenta alternar a música se os ícones foram carregados
-                if icons_loaded:
-                    if music_button_rect and music_button_rect.collidepoint(event.pos):
-                        music_on = toggle_music(music_on)
-                    if restart_button_rect and restart_button_rect.collidepoint(event.pos):
-                        board, tiles, score = restart_game()
-                        game_over = False
+                if icons_loaded and music_button_rect and music_button_rect.collidepoint(event.pos):
+                    music_on = toggle_music(music_on)
             elif event.type == pygame.KEYDOWN:
                 if animations_done:
                     if game_over:
@@ -343,9 +335,9 @@ def run_game():
         if not game_over and is_game_over(board) and animations_done:
             game_over = True
             
-        music_button_rect, restart_button_rect = draw_board(
+        music_button_rect = draw_board(
             screen, board, tiles, score, font, score_font, game_over,
-            music_on, icon_on, icon_off, icon_restart
+            music_on, icon_on, icon_off
         )
         
         pygame.display.flip()

@@ -52,7 +52,7 @@ def draw_grid(screen, board):
             pygame.draw.rect(screen, (50, 50, 50), rect)
             pygame.draw.rect(screen, (0, 0, 0), rect, 2)
 
-def draw_board(screen, board, tiles, score, font, score_font, game_over, music_on, icon_on, icon_off, icon_restart):
+def draw_board(screen, board, tiles, score, font, score_font, game_over, music_on, icon_on, icon_off):
     screen.fill((30, 30, 30))
 
     # Score
@@ -64,8 +64,7 @@ def draw_board(screen, board, tiles, score, font, score_font, game_over, music_o
     screen.blit(score_text, (score_x, score_y))
 
     music_button_rect = None
-    restart_button_rect = None
-    if icon_on and icon_off and icon_restart: # Só desenha se os ícones foram carregados
+    if icon_on and icon_off: # Só desenha se os ícones foram carregados
         width, height = screen.get_size()
         icon_to_draw = icon_on if music_on else icon_off
         padding = 10
@@ -73,10 +72,6 @@ def draw_board(screen, board, tiles, score, font, score_font, game_over, music_o
         # Posiciona o ícone no canto superior direito
         music_button_rect = icon_to_draw.get_rect(
             topright=(width - padding, padding)
-        )
-
-        restart_button_rect = icon_restart.get_rect(
-            topright=(music_button_rect.left - padding, padding)
         )
         
         # Efeito de hover
@@ -86,14 +81,7 @@ def draw_board(screen, board, tiles, score, font, score_font, game_over, music_o
         else:
             icon_to_draw.set_alpha(255)
 
-        if restart_button_rect.collidepoint(mouse_pos): 
-            icon_restart.set_alpha(200)
-        else: 
-            icon_restart.set_alpha(255)
-
-
         screen.blit(icon_to_draw, music_button_rect)
-        screen.blit(icon_restart, restart_button_rect) 
     
 
 
@@ -132,4 +120,4 @@ def draw_board(screen, board, tiles, score, font, score_font, game_over, music_o
         screen.blit(text2, text2_rect)
 
     pygame.display.flip()
-    return music_button_rect, restart_button_rect
+    return music_button_rect
