@@ -55,12 +55,23 @@ def draw_grid(screen, board):
 def draw_board(screen, board, tiles, score, font, score_font, game_over, music_on, icon_on, icon_off, icon_restart):
     screen.fill((30, 30, 30))
 
+    width, height = screen.get_size()
+    board_size = len(board)
+    header_height = int(height * 0.12)
+    max_board_width = int(width * 0.9)
+    max_board_height = int((height - header_height) * 0.85)
+    tile_size = min(max_board_width // board_size, max_board_height // board_size)
+    board_pixel_width = tile_size * board_size
+    board_pixel_height = tile_size * board_size
+    offset_x = (width - board_pixel_width) // 2
+    offset_y = header_height + ((height - header_height) - board_pixel_height) // 2
+
     # Score
     score_text = score_font.render(f"Pontos: {score}", True, (255, 255, 255))
     score_x = offset_x
     score_y = offset_y - score_text.get_height() - 10
     if score_y < 5:
-        score_y = 5 
+        score_y = 5
     screen.blit(score_text, (score_x, score_y))
 
     music_button_rect = None

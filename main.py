@@ -304,7 +304,6 @@ def run_game():
                 pygame.quit()
                 sys.exit()
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                # Só tenta alternar a música se os ícones foram carregados
                 if icons_loaded:
                     if music_button_rect and music_button_rect.collidepoint(event.pos):
                         music_on = toggle_music(music_on)
@@ -336,11 +335,13 @@ def run_game():
         
         cleanup_merged_tiles(tiles)
 
+        # Finaliza animações e gera novo tile
         if not animations_done and not are_animations_running(tiles):
             spawn_tile(board, tiles)
             animations_done = True 
 
-        if not game_over and is_game_over(board) and animations_done:
+        # ✅ Verifica game over independentemente das animações
+        if not game_over and is_game_over(board):
             game_over = True
             
         music_button_rect, restart_button_rect = draw_board(

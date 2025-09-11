@@ -33,7 +33,7 @@ COLORS = {
 }
 
 BASIC_POOL = [
-    "IP"
+    "IP", "POO"
 ]
 
 MAX_FONT_SIZE = 24
