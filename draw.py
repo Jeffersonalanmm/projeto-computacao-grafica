@@ -35,11 +35,32 @@ def draw_grid(screen, board):
             pygame.draw.rect(screen, (50, 50, 50), rect)  
             pygame.draw.rect(screen, (0, 0, 0), rect, 2)  
 
-def draw_board(screen, board, tiles, score, font, score_font, game_over=False):
+def draw_board(screen, board, tiles, score, font, score_font, game_over, music_on, icon_on, icon_off):
     screen.fill((30, 30, 30))
 
     score_text = score_font.render(f"Pontos: {score}", True, (255, 255, 255))
     screen.blit(score_text, (10, 10))
+
+    music_button_rect = None
+    if icon_on and icon_off: # Só desenha se os ícones foram carregados
+        width, height = screen.get_size()
+        icon_to_draw = icon_on if music_on else icon_off
+        padding = 10
+        
+        # Posiciona o ícone no canto superior direito
+        music_button_rect = icon_to_draw.get_rect(
+            topright=(width - padding, padding)
+        )
+        
+        # Efeito de hover
+        mouse_pos = pygame.mouse.get_pos()
+        if music_button_rect.collidepoint(mouse_pos):
+            icon_to_draw.set_alpha(200) 
+        else:
+            icon_to_draw.set_alpha(255)
+
+        screen.blit(icon_to_draw, music_button_rect)
+    
 
     draw_grid(screen, board)
 
@@ -78,3 +99,4 @@ def draw_board(screen, board, tiles, score, font, score_font, game_over=False):
         screen.blit(text2, text2_rect)
 
     pygame.display.flip()
+    return music_button_rect
