@@ -1,7 +1,7 @@
 import pygame
 import math
 import sys
-from board import create_board, spawn_tile, move, is_game_over
+from board import create_board, spawn_tile, move, is_game_over, are_animations_running, cleanup_merged_tiles
 from draw import draw_board
 from settings import WINDOW_SIZE, HEADER_HEIGHT
 
@@ -90,7 +90,7 @@ def draw_button(screen, button_rect, scale_factor, hovered, fonts, option_text):
     option_rect = option_surface.get_rect(center=button_rect.center)
     screen.blit(option_surface, option_rect)
 
-def show_menu(screen):
+def show_menu(screen, music_on, icon_on, icon_off):
     TYPING_SPEED = 0.05
     CURSOR_BLINK_SPEED = 2
     SUBTITLE_TEXT = "Uma jornada pela grade curricular."
@@ -181,6 +181,9 @@ def show_menu(screen):
         button_rect = calculate_button_rect(base_button_rect, scale_factor, hovered, elapsed_time)
         draw_button(screen, button_rect, scale_factor, hovered, fonts, option)
 
+        if icon_on: 
+            music_button_rect = draw_music_button(screen, music_on, icon_on, icon_off)
+
         pygame.display.flip()
 
         for event in pygame.event.get():
@@ -189,10 +192,12 @@ def show_menu(screen):
                 sys.exit()
             elif event.type == pygame.KEYDOWN:
                 if event.key in [pygame.K_RETURN, pygame.K_SPACE] and scale_factor >= 1.0:
-                    return
+                    return music_on
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if scale_factor >= 1.0 and button_rect.collidepoint(event.pos):
-                    return
+                    return music_on
+                if icon_on and music_button_rect.collidepoint(event.pos):
+                    music_on = toggle_music(music_on)
 
         clock.tick(MENU_FPS)
 
@@ -203,11 +208,46 @@ def restart_game():
     spawn_tile(board, tiles)
     return board, tiles, 0
 
+def toggle_music(music_on):
+    if not pygame.mixer.get_init():
+        return False
+    
+    music_on = not music_on
+    if music_on:
+        try:
+            pygame.mixer.music.load("2048-song.mp3") 
+            pygame.mixer.music.play(-1)
+        except pygame.error:
+            print("⚠ Não foi possível reiniciar a música.")
+            return False
+    else:
+        pygame.mixer.music.stop()
+    return music_on
+
+def draw_music_button(screen, music_on, icon_on, icon_off):
+    width, height = screen.get_size()
+    
+    icon_to_draw = icon_on if music_on else icon_off
+    
+    padding = 15
+    icon_rect = icon_to_draw.get_rect(
+        topright=(width - padding, padding)
+    )
+    
+    mouse_pos = pygame.mouse.get_pos()
+    if icon_rect.collidepoint(mouse_pos):
+        icon_to_draw.set_alpha(200) 
+    else:
+        icon_to_draw.set_alpha(255) 
+
+    screen.blit(icon_to_draw, icon_rect)
+    
+    return icon_rect
+
 def run_game():
     pygame.init()
     pygame.mixer.init()
 
-    # Tornar a janela inicial responsiva e centralizada
     info = pygame.display.Info()
     screen_width = int(info.current_w * 0.7)
     screen_height = int(info.current_h * 0.75)
@@ -215,19 +255,42 @@ def run_game():
     pygame.display.set_caption("BCC2048 - Uma jornada pela grade curricular")
 
     try:
+        icon_size = (30, 30) 
+        icon_on_img = pygame.image.load("icons/music_on.png").convert_alpha()
+        icon_off_img = pygame.image.load("icons/music_off.png").convert_alpha()
+        
+        icon_on = pygame.transform.scale(icon_on_img, icon_size)
+        icon_off = pygame.transform.scale(icon_off_img, icon_size)
+        icons_loaded = True
+    except pygame.error:
+        print("⚠ Ícones de música não encontrados! O botão será desativado.")
+        icons_loaded = False
+
+    music_on = True
+    try:
         pygame.mixer.music.load("2048-song.mp3")
-        pygame.mixer.music.play(-1)
-    except:
+        if music_on:
+            pygame.mixer.music.play(-1)
+    except pygame.error:
+        music_on = False
         print("⚠ Música não encontrada!")
 
-    show_menu(screen)
+    if icons_loaded:
+        music_on = show_menu(screen, music_on, icon_on, icon_off)
+    else:
+        show_menu(screen, music_on, None, None)
 
+    screen = pygame.display.set_mode((WINDOW_SIZE, WINDOW_SIZE + HEADER_HEIGHT))
+    pygame.display.set_caption("2048 BCC - PyGame")
     font = pygame.font.SysFont("Arial", 20, bold=True)
     score_font = pygame.font.SysFont("Arial", 24, bold=True)
 
     board, tiles, score = restart_game()
     clock = pygame.time.Clock()
     game_over = False
+    animations_done = True
+
+    music_button_rect = None
 
     while True:
         dt = clock.tick(60) / 1000
@@ -236,36 +299,48 @@ def run_game():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                # Só tenta alternar a música se os ícones foram carregados
+                if icons_loaded and music_button_rect and music_button_rect.collidepoint(event.pos):
+                    music_on = toggle_music(music_on)
             elif event.type == pygame.KEYDOWN:
-                if game_over:
-                    if event.key == pygame.K_ESCAPE:
-                        board, tiles, score = restart_game()
-                        game_over = False
-                else:
-                    moved, points = False, 0
-                    
-                    if event.key in [pygame.K_UP, pygame.K_w]:
-                        moved, points = move(board, tiles, "up")
-                    elif event.key in [pygame.K_DOWN, pygame.K_s]:
-                        moved, points = move(board, tiles, "down")
-                    elif event.key in [pygame.K_LEFT, pygame.K_a]:
-                        moved, points = move(board, tiles, "left")
-                    elif event.key in [pygame.K_RIGHT, pygame.K_d]:
-                        moved, points = move(board, tiles, "right")
-                    elif event.key == pygame.K_ESCAPE:
-                        board, tiles, score = restart_game()
-                        continue
-
-                    if moved:
-                        score += points
+                if animations_done:
+                    if game_over:
+                        if event.key == pygame.K_ESCAPE:
+                            board, tiles, score = restart_game()
+                            game_over = False
+                    else:
+                        direction = None
+                        if event.key in [pygame.K_UP, pygame.K_w]: direction = "up"
+                        elif event.key in [pygame.K_DOWN, pygame.K_s]: direction = "down"
+                        elif event.key in [pygame.K_LEFT, pygame.K_a]: direction = "left"
+                        elif event.key in [pygame.K_RIGHT, pygame.K_d]: direction = "right"
+                        elif event.key == pygame.K_ESCAPE: board, tiles, score = restart_game()
+                        
+                        if direction:
+                            moved, points = move(board, tiles, direction)
+                            if moved:
+                                score += points
+                                animations_done = False
 
         for tile in tiles:
             tile.update(dt)
+        
+        cleanup_merged_tiles(tiles)
 
-        if not game_over and is_game_over(board):
+        if not animations_done and not are_animations_running(tiles):
+            spawn_tile(board, tiles)
+            animations_done = True 
+
+        if not game_over and is_game_over(board) and animations_done:
             game_over = True
-
-        draw_board(screen, board, tiles, score, font, score_font, game_over=game_over)
+            
+        music_button_rect = draw_board(
+            screen, board, tiles, score, font, score_font, game_over,
+            music_on, icon_on, icon_off
+        )
+        
+        pygame.display.flip()
 
 if __name__ == "__main__":
     run_game()

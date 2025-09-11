@@ -1,3 +1,6 @@
+<<<<<<< HEAD
+__pycache__/
+=======
 # Python cache
 __pycache__/
 *.pyc
@@ -20,3 +23,4 @@ dist/
 *.log
 .DS_Store
 Thumbs.db
+>>>>>>> upstream/main
