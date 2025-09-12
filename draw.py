@@ -188,4 +188,3 @@ def draw_board_gl(board, tiles, score, high_score, font, score_font, game_over, 
         draw_textured_quad((width-tw2)/2, (height-th2)/2+30, tw2, th2, tex_id2)
 
     return music_button_rect, restart_button_rect
-
