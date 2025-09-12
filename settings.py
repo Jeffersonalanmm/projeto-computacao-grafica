@@ -1,3 +1,4 @@
+
 WINDOW_SIZE = 600
 BOARD_SIZE = 4
 TILE_SIZE = WINDOW_SIZE // BOARD_SIZE
@@ -37,7 +38,7 @@ COLORS = {
 }
 
 BASIC_POOL = [
-    "IP", "POO"
+    "IP"
 ]
 
 MAX_FONT_SIZE = 24
