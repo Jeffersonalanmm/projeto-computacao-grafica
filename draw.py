@@ -1,10 +1,8 @@
-
 import pygame
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from settings import TILE_SIZE, HEADER_HEIGHT, COLORS
 import math
-
 
 _text_texture_cache = {}
 
@@ -12,11 +10,9 @@ def init_gl(width, height):
     glViewport(0, 0, width, height)
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
-   
     gluOrtho2D(0, width, height, 0)
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
-
     glEnable(GL_BLEND)
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
     glDisable(GL_DEPTH_TEST)
@@ -61,28 +57,24 @@ def draw_filled_rect(x, y, w, h, color):
 def draw_rect_border(x, y, w, h, thickness, color):
     r, g, b = [c/255.0 for c in color]
     glColor3f(r, g, b)
-   
     glBegin(GL_QUADS)
     glVertex2f(x, y)
     glVertex2f(x + w, y)
     glVertex2f(x + w, y + thickness)
     glVertex2f(x, y + thickness)
     glEnd()
-   
     glBegin(GL_QUADS)
     glVertex2f(x, y + h - thickness)
     glVertex2f(x + w, y + h - thickness)
     glVertex2f(x + w, y + h)
     glVertex2f(x, y + h)
     glEnd()
-
     glBegin(GL_QUADS)
     glVertex2f(x, y)
     glVertex2f(x + thickness, y)
     glVertex2f(x + thickness, y + h)
     glVertex2f(x, y + h)
     glEnd()
-
     glBegin(GL_QUADS)
     glVertex2f(x + w - thickness, y)
     glVertex2f(x + w, y)
@@ -101,7 +93,7 @@ def draw_textured_quad(x, y, w, h, tex_id):
     glEnd()
     glBindTexture(GL_TEXTURE_2D, 0)
 
-def draw_board_gl(board, tiles, score, font, score_font, game_over, music_on, icon_on, icon_off, icon_restart):
+def draw_board_gl(board, tiles, score, high_score, font, score_font, game_over, music_on, icon_on, icon_off, icon_restart):
     width, height = pygame.display.get_surface().get_size()
     glViewport(0, 0, width, height)
     glMatrixMode(GL_PROJECTION)
@@ -122,14 +114,16 @@ def draw_board_gl(board, tiles, score, font, score_font, game_over, music_on, ic
     offset_x = (width - board_pixel_width) // 2
     offset_y = header_height + ((height - header_height) - board_pixel_height) // 2
 
-  
     score_text = f"Pontos: {score}"
     tex_id, tw, th, surf = get_text_texture(score_text, score_font, (255,255,255))
     score_x = offset_x
-    score_y = 10  
+    score_y = 10
     draw_textured_quad(score_x, score_y, tw, th, tex_id)
 
-   
+    high_text = f"Recorde: {high_score}"
+    tex_id2, tw2, th2, surf2 = get_text_texture(high_text, score_font, (255,215,0))
+    draw_textured_quad(score_x + tw + 20, score_y, tw2, th2, tex_id2)
+
     music_button_rect = None
     restart_button_rect = None
     if icon_on is not None and icon_off is not None and icon_restart is not None:
@@ -153,7 +147,6 @@ def draw_board_gl(board, tiles, score, font, score_font, game_over, music_on, ic
         draw_textured_quad(music_button_rect.x, music_button_rect.y, music_button_rect.width, music_button_rect.height, tex_music_id)
         draw_textured_quad(restart_button_rect.x, restart_button_rect.y, restart_button_rect.width, restart_button_rect.height, tex_restart_id)
 
- 
     for y in range(board_size):
         for x in range(board_size):
             rect_x = offset_x + x * tile_size
@@ -161,7 +154,6 @@ def draw_board_gl(board, tiles, score, font, score_font, game_over, music_on, ic
             draw_filled_rect(rect_x, rect_y, tile_size, tile_size, (50,50,50))
             draw_rect_border(rect_x, rect_y, tile_size, tile_size, 2, (0,0,0))
 
-   
     for tile in tiles:
         center_x = offset_x + tile.x_draw * tile_size + tile_size / 2.0
         center_y = offset_y + tile.y_draw * tile_size + tile_size / 2.0
@@ -178,7 +170,6 @@ def draw_board_gl(board, tiles, score, font, score_font, game_over, music_on, ic
         scale = min((w - 8)/tw, (h - 8)/th, 1.0)
         draw_textured_quad(center_x - tw*scale/2.0, center_y - th*scale/2.0, tw*scale, th*scale, tex_id)
 
-    
     if game_over:
         glEnable(GL_BLEND)
         glColor4f(0,0,0,0.7)
@@ -197,3 +188,4 @@ def draw_board_gl(board, tiles, score, font, score_font, game_over, music_on, ic
         draw_textured_quad((width-tw2)/2, (height-th2)/2+30, tw2, th2, tex_id2)
 
     return music_button_rect, restart_button_rect
+
