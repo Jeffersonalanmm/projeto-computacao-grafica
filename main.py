@@ -3,7 +3,7 @@ import math
 import sys
 from board import create_board, spawn_tile, move, is_game_over, are_animations_running, cleanup_merged_tiles
 from draw import draw_board
-from settings import WINDOW_SIZE, HEADER_HEIGHT
+from settings import WINDOW_SIZE, HEADER_HEIGHT, COLOR_TOP, COLOR_BOTTOM
 
 # Constantes do menu
 SPAWN_DURATION = 1.5
@@ -12,8 +12,6 @@ PULSE_INTENSITY = 0.05
 MENU_FPS = 60
 
 # Cores
-COLOR_TOP = (40, 0, 60)
-COLOR_BOTTOM = (0, 0, 80)
 TITLE_COLOR = (255, 215, 0)
 SUBTITLE_COLOR = (200, 200, 255)
 BUTTON_TEXT_NORMAL = (180, 180, 180)
@@ -283,10 +281,8 @@ def run_game():
     else:
         show_menu(screen, music_on, None, None)
 
-    screen = pygame.display.set_mode((WINDOW_SIZE, WINDOW_SIZE + HEADER_HEIGHT))
+    #Responsividade
     pygame.display.set_caption("2048 BCC - PyGame")
-    font = pygame.font.SysFont("Arial", 20, bold=True)
-    score_font = pygame.font.SysFont("Arial", 24, bold=True)
 
     board, tiles, score = restart_game()
     clock = pygame.time.Clock()
@@ -345,7 +341,7 @@ def run_game():
             game_over = True
             
         music_button_rect, restart_button_rect = draw_board(
-            screen, board, tiles, score, font, score_font, game_over,
+            screen, board, tiles, score, None, None, game_over,
             music_on, icon_on, icon_off, icon_restart
         )
         
