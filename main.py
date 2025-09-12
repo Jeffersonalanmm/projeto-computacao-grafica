@@ -1,17 +1,16 @@
+
 import pygame
 import math
 import sys
 from board import create_board, spawn_tile, move, is_game_over, are_animations_running, cleanup_merged_tiles
-from draw import draw_board
+from draw import init_gl, draw_board_gl, update_viewport_on_resize
 from settings import WINDOW_SIZE, HEADER_HEIGHT
 
-# Constantes do menu
+
 SPAWN_DURATION = 1.5
-PULSE_FREQUENCY = 8
-PULSE_INTENSITY = 0.05
 MENU_FPS = 60
 
-# Cores
+
 COLOR_TOP = (40, 0, 60)
 COLOR_BOTTOM = (0, 0, 80)
 TITLE_COLOR = (255, 215, 0)
@@ -34,7 +33,7 @@ def create_gradient_surface(width, height):
     return gradient
 
 def calculate_responsive_sizes(width, height):
-    # Usar o menor lado para garantir proporção
+    
     min_side = min(width, height)
     return {
         'title_font_size': max(24, min_side // 10),
@@ -70,7 +69,7 @@ def calculate_button_rect(base_rect, scale_factor, hovered, elapsed_time):
         
     return button_rect
 
-def draw_button(screen, button_rect, scale_factor, hovered, fonts, option_text):
+def draw_button(surface, button_rect, scale_factor, hovered, fonts, option_text):
     if scale_factor <= 0:
         return
     
@@ -83,12 +82,12 @@ def draw_button(screen, button_rect, scale_factor, hovered, fonts, option_text):
     text_alpha = int(255 * scale_factor)
     text_with_alpha = tuple(min(c, text_alpha) for c in text_color)
     
-    pygame.draw.rect(screen, bg_with_alpha, button_rect, border_radius=10)
-    pygame.draw.rect(screen, border_with_alpha, button_rect, 2, border_radius=10)
+    pygame.draw.rect(surface, bg_with_alpha, button_rect, border_radius=10)
+    pygame.draw.rect(surface, border_with_alpha, button_rect, 2, border_radius=10)
     
     option_surface = fonts['option'].render(option_text, True, text_with_alpha)
     option_rect = option_surface.get_rect(center=button_rect.center)
-    screen.blit(option_surface, option_rect)
+    surface.blit(option_surface, option_rect)
 
 def show_menu(screen, music_on, icon_on, icon_off):
     TYPING_SPEED = 0.05
@@ -96,10 +95,9 @@ def show_menu(screen, music_on, icon_on, icon_off):
     SUBTITLE_TEXT = "Uma jornada pela grade curricular."
     SUBTITLE_COLOR_ORANGE = (255, 180, 60)
     
-    def draw_typing_subtitle_local(screen, fonts, width, subtitle_y, elapsed_time):
+    def draw_typing_subtitle_local(surface, fonts, width, subtitle_y, elapsed_time):
         chars_to_show = int(elapsed_time / TYPING_SPEED)
         chars_to_show = min(chars_to_show, len(SUBTITLE_TEXT))
-        
         current_text = SUBTITLE_TEXT[:chars_to_show]
         
         show_cursor = False
@@ -118,7 +116,7 @@ def show_menu(screen, music_on, icon_on, icon_off):
                 subtitle_surface.set_alpha(alpha_value)
             
             subtitle_rect = subtitle_surface.get_rect(center=(width // 2, subtitle_y))
-            screen.blit(subtitle_surface, subtitle_rect)
+            surface.blit(subtitle_surface, subtitle_rect)
     
     clock = pygame.time.Clock()
     option = "Jogar"
@@ -143,9 +141,10 @@ def show_menu(screen, music_on, icon_on, icon_off):
             fonts = create_fonts(sizes)
             last_size = current_size
 
+        
         screen.blit(gradient_surface, (0, 0))
 
-        # Calcular altura total do bloco do menu
+       
         pulse_scale = 1 + 0.03 * math.sin(elapsed_time * 2)
         title_surface = fonts['title'].render("BCC2048", True, TITLE_COLOR)
         title_size = (int(title_surface.get_width() * pulse_scale), int(title_surface.get_height() * pulse_scale))
@@ -161,17 +160,14 @@ def show_menu(screen, music_on, icon_on, icon_off):
         total_block_height = title_height + spacing + subtitle_height + spacing * 2 + button_height
         top_y = (height - total_block_height) // 2
 
-        # Título
         title_rect = title_surface.get_rect(center=(width // 2, top_y + title_height // 2))
         screen.blit(title_surface, title_rect)
 
-        # Subtítulo
         subtitle_y = title_rect.bottom + spacing + subtitle_height // 2
         draw_typing_subtitle_local(screen, fonts, width, subtitle_y, elapsed_time)
 
-        # Botão
         button_x = (width - sizes['button_width']) // 2
-        button_y = subtitle_y + subtitle_height // 2 + spacing * 2  # dobra o espaço
+        button_y = subtitle_y + subtitle_height // 2 + spacing * 2
         base_button_rect = pygame.Rect(button_x, button_y, sizes['button_width'], sizes['button_height'])
 
         mouse_pos = pygame.mouse.get_pos()
@@ -181,8 +177,10 @@ def show_menu(screen, music_on, icon_on, icon_off):
         button_rect = calculate_button_rect(base_button_rect, scale_factor, hovered, elapsed_time)
         draw_button(screen, button_rect, scale_factor, hovered, fonts, option)
 
-        if icon_on: 
-            music_button_rect = draw_music_button(screen, music_on, icon_on, icon_off)
+        if icon_on:
+            
+            music_button_rect = icon_on.get_rect(topright=(width - 15, 15))
+            screen.blit(icon_on if music_on else icon_off, music_button_rect)
 
         pygame.display.flip()
 
@@ -197,7 +195,7 @@ def show_menu(screen, music_on, icon_on, icon_off):
                 if scale_factor >= 1.0 and button_rect.collidepoint(event.pos):
                     return music_on
                 if icon_on and music_button_rect.collidepoint(event.pos):
-                    music_on = toggle_music(music_on)
+                    music_on = not music_on
 
         clock.tick(MENU_FPS)
 
@@ -208,83 +206,54 @@ def restart_game():
     spawn_tile(board, tiles)
     return board, tiles, 0
 
-def toggle_music(music_on):
-    if not pygame.mixer.get_init():
-        return False
-    
-    music_on = not music_on
-    if music_on:
-        try:
-            pygame.mixer.music.load("2048-song.mp3") 
-            pygame.mixer.music.play(-1)
-        except pygame.error:
-            print("⚠ Não foi possível reiniciar a música.")
-            return False
-    else:
-        pygame.mixer.music.stop()
-    return music_on
-
-def draw_music_button(screen, music_on, icon_on, icon_off):
-    width, height = screen.get_size()
-    
-    icon_to_draw = icon_on if music_on else icon_off
-    
-    padding = 15
-    icon_rect = icon_to_draw.get_rect(
-        topright=(width - padding, padding)
-    )
-    
-    mouse_pos = pygame.mouse.get_pos()
-    if icon_rect.collidepoint(mouse_pos):
-        icon_to_draw.set_alpha(200) 
-    else:
-        icon_to_draw.set_alpha(255) 
-
-    screen.blit(icon_to_draw, icon_rect)
-    
-    return icon_rect
-
 def run_game():
     pygame.init()
     pygame.mixer.init()
 
+    
     info = pygame.display.Info()
     screen_width = int(info.current_w * 0.7)
     screen_height = int(info.current_h * 0.75)
-    screen = pygame.display.set_mode((screen_width, screen_height), pygame.RESIZABLE)
-    pygame.display.set_caption("BCC2048 - Uma jornada pela grade curricular")
 
+    
+    screen = pygame.display.set_mode((screen_width, screen_height), pygame.RESIZABLE)
+    pygame.display.set_caption("BCC2048 - Menu (antes OpenGL)")
+
+    
     try:
-        icon_size = (30, 30) 
+        icon_size = (30, 30)
         icon_on_img = pygame.image.load("icons/music_on.png").convert_alpha()
         icon_off_img = pygame.image.load("icons/music_off.png").convert_alpha()
         restart_icon = pygame.image.load("icons/restart.png").convert_alpha()
-        
         icon_on = pygame.transform.scale(icon_on_img, icon_size)
         icon_off = pygame.transform.scale(icon_off_img, icon_size)
         icon_restart = pygame.transform.scale(restart_icon, icon_size)
-    
         icons_loaded = True
-    except pygame.error:
-        print("⚠ Ícones não encontrados!")
+    except Exception:
         icons_loaded = False
+        icon_on = icon_off = icon_restart = None
 
     music_on = True
     try:
         pygame.mixer.music.load("2048-song.mp3")
         if music_on:
             pygame.mixer.music.play(-1)
-    except pygame.error:
+    except Exception:
         music_on = False
-        print("⚠ Música não encontrada!")
 
+    
     if icons_loaded:
         music_on = show_menu(screen, music_on, icon_on, icon_off)
     else:
         show_menu(screen, music_on, None, None)
 
-    screen = pygame.display.set_mode((WINDOW_SIZE, WINDOW_SIZE + HEADER_HEIGHT))
-    pygame.display.set_caption("2048 BCC - PyGame")
+    
+    flags = pygame.OPENGL | pygame.DOUBLEBUF | pygame.RESIZABLE
+    screen = pygame.display.set_mode((WINDOW_SIZE, WINDOW_SIZE + HEADER_HEIGHT), flags)
+    pygame.display.set_caption("2048 BCC - OpenGL 2D")
+
+    init_gl(*screen.get_size()) 
+
     font = pygame.font.SysFont("Arial", 20, bold=True)
     score_font = pygame.font.SysFont("Arial", 24, bold=True)
 
@@ -296,20 +265,30 @@ def run_game():
     music_button_rect = None
     restart_button_rect = None
 
-    while True:
-        dt = clock.tick(60) / 1000
+    running = True
+    while running:
+        dt = clock.tick(60) / 1000.0
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
+                running = False
+            elif event.type == pygame.VIDEORESIZE:
+               
+                update_viewport_on_resize(event.w, event.h)
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                if icons_loaded:
-                    if music_button_rect and music_button_rect.collidepoint(event.pos):
-                        music_on = toggle_music(music_on)
-                    if restart_button_rect and restart_button_rect.collidepoint(event.pos):
-                        board, tiles, score = restart_game()
-                        game_over = False
+                
+                if music_button_rect and music_button_rect.collidepoint(event.pos):
+                    music_on = not music_on
+                    if music_on:
+                        try:
+                            pygame.mixer.music.play(-1)
+                        except Exception:
+                            pass
+                    else:
+                        pygame.mixer.music.stop()
+                if restart_button_rect and restart_button_rect.collidepoint(event.pos):
+                    board, tiles, score = restart_game()
+                    game_over = False
             elif event.type == pygame.KEYDOWN:
                 if animations_done:
                     if game_over:
@@ -322,7 +301,8 @@ def run_game():
                         elif event.key in [pygame.K_DOWN, pygame.K_s]: direction = "down"
                         elif event.key in [pygame.K_LEFT, pygame.K_a]: direction = "left"
                         elif event.key in [pygame.K_RIGHT, pygame.K_d]: direction = "right"
-                        elif event.key == pygame.K_ESCAPE: board, tiles, score = restart_game()
+                        elif event.key == pygame.K_ESCAPE:
+                            board, tiles, score = restart_game()
                         
                         if direction:
                             moved, points = move(board, tiles, direction)
@@ -332,24 +312,26 @@ def run_game():
 
         for tile in tiles:
             tile.update(dt)
-        
         cleanup_merged_tiles(tiles)
 
-        # Finaliza animações e gera novo tile
         if not animations_done and not are_animations_running(tiles):
             spawn_tile(board, tiles)
-            animations_done = True 
+            animations_done = True
 
-        # ✅ Verifica game over independentemente das animações
-        if not game_over and is_game_over(board):
+        if not game_over and is_game_over(board, tiles) and animations_done:
             game_over = True
-            
-        music_button_rect, restart_button_rect = draw_board(
-            screen, board, tiles, score, font, score_font, game_over,
+
+
+       
+        music_button_rect, restart_button_rect = draw_board_gl(
+            board, tiles, score, font, score_font, game_over,
             music_on, icon_on, icon_off, icon_restart
         )
-        
+
         pygame.display.flip()
+
+    pygame.quit()
+    sys.exit()
 
 if __name__ == "__main__":
     run_game()

@@ -8,18 +8,18 @@ class Tile:
         self.value = value
         self.x_draw = float(x)
         self.y_draw = float(y)
-        self.speed = 20
+        self.speed = 12 
 
         self.scale = 0.0
-        self.animation_speed = 12
+        self.animation_speed = 10.0
 
-        # Atributos que controlam a junção das peças
         self.merged_this_turn = False
         self.to_remove = False
         self.pending_value = None
         self.merge_target = None
-
+        
     def update(self, dt):
+        
         if self.merge_target:
             self.x_draw += (self.merge_target.x_draw - self.x_draw) * min(1, dt * self.speed)
             self.y_draw += (self.merge_target.y_draw - self.y_draw) * min(1, dt * self.speed)
@@ -36,11 +36,13 @@ class Tile:
             self.x_draw += (self.x - self.x_draw) * min(1, dt * self.speed)
             self.y_draw += (self.y - self.y_draw) * min(1, dt * self.speed)
         
+        
         target_scale = 1.0
         if abs(self.scale - target_scale) > 0.01:
             self.scale += (target_scale - self.scale) * self.animation_speed * dt
-        elif self.scale != 1.0:
-            self.scale = 1.0
+        
+        if abs(self.scale - target_scale) < 0.01:
+            self.scale = target_scale
 
 def create_board():
     return [[None for _ in range(BOARD_SIZE)] for _ in range(BOARD_SIZE)]
@@ -75,34 +77,26 @@ def move(board, tiles, direction):
         x_start, y_start = current_tile.x, current_tile.y
         x, y = x_start, y_start
 
-        # Encontra a posição final do tile, pulando espaços vazios
         while 0 <= x + dx < BOARD_SIZE and 0 <= y + dy < BOARD_SIZE and board[y + dy][x + dx] is None:
             x += dx
             y += dy
 
-        # Agora, a lógica de fusão
-        # Verifica se o próximo bloco é um alvo de fusão válido
         if 0 <= x + dx < BOARD_SIZE and 0 <= y + dy < BOARD_SIZE:
-            # Obtém a peça alvo que está imediatamente ao lado da posição de parada
-            target_value = board[y + dy][x + dx]
-            
-            # Checa se a fusão é possível e se a peça alvo ainda não foi fundida neste turno
-            if (current_tile.value, target_value) in MERGE_RULES:
-                target_tile = next((t for t in tiles if t.x == x + dx and t.y == y + dy), None)
-                
-                if target_tile and not target_tile.merged_this_turn:
-                    merged_value, points = MERGE_RULES[(current_tile.value, target_value)]
-                    total_score += points
-                    
-                    current_tile.merge_target = target_tile
-                    target_tile.pending_value = merged_value
-                    target_tile.merged_this_turn = True
-                    board[y_start][x_start] = None
-                    moved = True
-                    continue  # Continua para o próximo tile para evitar o movimento simples abaixo
+            target_tile = next((t for t in tiles if t.x == x + dx and t.y == y + dy), None)
+            if target_tile and not target_tile.merged_this_turn and (current_tile.value, target_tile.value) in MERGE_RULES:
+                merged_value, points = MERGE_RULES[(current_tile.value, target_tile.value)]
+                total_score += points
+
+                current_tile.merge_target = target_tile
+                target_tile.pending_value = merged_value
+                target_tile.merged_this_turn = True
+
+               
+                board[y_start][x_start] = None
+                board[y + dy][x + dx] = merged_value  
+                moved = True
         
-        # Se não houve fusão, move a peça para a posição final
-        if x != x_start or y != y_start:
+        if not current_tile.merge_target and (x != x_start or y != y_start):
             current_tile.x, current_tile.y = x, y
             board[y][x] = current_tile.value
             board[y_start][x_start] = None
@@ -110,27 +104,30 @@ def move(board, tiles, direction):
 
     return moved, total_score
 
-def is_game_over(board):
+def is_game_over(board, tiles):
+    temp_board = [[None for _ in range(BOARD_SIZE)] for _ in range(BOARD_SIZE)]
+    for tile in tiles:
+        temp_board[tile.y][tile.x] = tile.value
+
     for i in range(BOARD_SIZE):
         for j in range(BOARD_SIZE):
-            if board[i][j] is None:
+            if temp_board[i][j] is None:
                 return False
-            for di, dj in [(0, 1), (1, 0)]:
-                ni, nj = i + di, j + dj
+            for di, dj in [(0,1),(1,0)]:
+                ni, nj = i+di, j+dj
                 if 0 <= ni < BOARD_SIZE and 0 <= nj < BOARD_SIZE:
-                    if (board[i][j], board[ni][nj]) in MERGE_RULES or (board[ni][nj], board[i][j]) in MERGE_RULES:
+                    if (temp_board[i][j], temp_board[ni][nj]) in MERGE_RULES or (temp_board[ni][nj], temp_board[i][j]) in MERGE_RULES:
                         return False
     return True
 
+
 def cleanup_merged_tiles(tiles):
-    """Remove as peças que terminaram sua animação de junção."""
     tiles[:] = [t for t in tiles if not t.to_remove]
 
-
 def are_animations_running(tiles):
-    """Verifica se alguma animação ainda está acontecendo."""
     for tile in tiles:
         if tile.merge_target: return True
         if abs(tile.x - tile.x_draw) > 0.01 or abs(tile.y - tile.y_draw) > 0.01: return True
-        if abs(tile.scale - 1.0) > 0.01: return True
+       
+        if abs(tile.scale - 1.0) > 0.001: return True
     return False
