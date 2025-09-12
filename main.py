@@ -192,7 +192,7 @@ def run_game():
     screen_width = int(info.current_w * 0.7)
     screen_height = int(info.current_h * 0.75)
     screen = pygame.display.set_mode((screen_width, screen_height), pygame.RESIZABLE)
-    pygame.display.set_caption("BCC2048 - Menu (antes OpenGL)")
+    pygame.display.set_caption("BCC2048")
     try:
         icon_size = (30, 30)
         icon_on_img = pygame.image.load("icons/music_on.png").convert_alpha()
@@ -217,8 +217,9 @@ def run_game():
     else:
         show_menu(screen, music_on, None, None)
     flags = pygame.OPENGL | pygame.DOUBLEBUF | pygame.RESIZABLE
-    screen = pygame.display.set_mode((WINDOW_SIZE, WINDOW_SIZE + HEADER_HEIGHT), flags)
-    pygame.display.set_caption("2048 BCC - OpenGL 2D")
+    current_w, current_h = screen.get_size()
+    screen = pygame.display.set_mode((current_w, current_h), flags)
+    pygame.display.set_caption("2048BCC")
     init_gl(*screen.get_size())
     font = pygame.font.SysFont("Arial", 20, bold=True)
     score_font = pygame.font.SysFont("Arial", 24, bold=True)
