@@ -281,9 +281,7 @@ def run_game():
     else:
         show_menu(screen, music_on, None, None)
 
-    # Keep the resizable screen created for the menu so the board remains responsive.
-    # Don't reset to a fixed WINDOW_SIZE here. Fonts for the board will be calculated
-    # dynamically inside the drawing routine so they scale with the window.
+    #Responsividade
     pygame.display.set_caption("2048 BCC - PyGame")
 
     board, tiles, score = restart_game()
