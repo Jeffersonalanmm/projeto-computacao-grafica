@@ -1,10 +1,17 @@
 import pygame
 from OpenGL.GL import *
 from OpenGL.GLU import *
-from settings import TILE_SIZE, HEADER_HEIGHT, COLORS
+from settings import TILE_SIZE, HEADER_HEIGHT, COLORS, COLOR_TOP, COLOR_BOTTOM
 import math
 
 _text_texture_cache = {}
+
+_draw_cache = {
+    'last_size': None,
+    'bg_tex': None,        # (tex_id, w, h)
+    'score_font': None,
+    'title_font': None,
+}
 
 def init_gl(width, height):
     glViewport(0, 0, width, height)
@@ -17,6 +24,19 @@ def init_gl(width, height):
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
     glDisable(GL_DEPTH_TEST)
     glEnable(GL_TEXTURE_2D)
+
+def calculate_responsive_sizes(width, height):
+    # Esplhar a lógica de dimensionamento do menu para que o board
+    min_side = min(width, height)
+    return {
+        'title_font_size': max(24, min_side // 10),
+        'subtitle_font_size': max(12, min_side // 28),
+        'option_font_size': max(6, min_side // 24),
+        'spacing': max(10, height // 24),
+        'title_y': max(int(height * 0.02), height // 12),
+        'button_width': max(120, width // 3),
+        'button_height': max(36, height // 14)
+    }
 
 def update_viewport_on_resize(w, h):
     pygame.display.set_mode((w, h), pygame.OPENGL | pygame.DOUBLEBUF | pygame.RESIZABLE)
@@ -101,8 +121,54 @@ def draw_board_gl(board, tiles, score, high_score, font, score_font, game_over, 
     gluOrtho2D(0, width, height, 0)
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
-    glClearColor(0.1176, 0.1176, 0.1176, 1.0)
     glClear(GL_COLOR_BUFFER_BIT)
+
+    current_size = (width, height)
+    if _draw_cache['last_size'] != current_size:
+        grad_h = min(256, max(2, height))
+        grad_small = pygame.Surface((1, grad_h)).convert_alpha()
+        for y in range(grad_h):
+            ratio = y / (grad_h - 1)
+            r = int(COLOR_TOP[0] * (1 - ratio) + COLOR_BOTTOM[0] * ratio)
+            g = int(COLOR_TOP[1] * (1 - ratio) + COLOR_BOTTOM[1] * ratio)
+            b = int(COLOR_TOP[2] * (1 - ratio) + COLOR_BOTTOM[2] * ratio)
+            grad_small.set_at((0, y), (r, g, b, 255))
+        grad_surf = pygame.transform.smoothscale(grad_small, (width, height))
+
+        if _draw_cache['bg_tex']:
+            try:
+                glDeleteTextures([_draw_cache['bg_tex'][0]])
+            except Exception:
+                pass
+        bg_tex_id, bw, bh = surface_to_texture(grad_surf)
+        _draw_cache['bg_tex'] = (bg_tex_id, bw, bh)
+
+    sizes = calculate_responsive_sizes(width, height)
+    board_size = len(board)
+    header_height = int(height * 0.12)
+    max_board_width = int(width * 0.9)
+    max_board_height = int((height - header_height) * 0.85)
+    est_tile = min(max_board_width // max(1, board_size), max_board_height // max(1, board_size))
+
+    score_font_size = max(14, min(48, est_tile // 3, sizes['title_font_size']))
+    title_font_size = score_font_size
+    _draw_cache['score_font'] = pygame.font.SysFont("Arial", score_font_size, bold=True)
+    _draw_cache['title_font'] = pygame.font.SysFont("Arial", title_font_size, bold=True)
+    _draw_cache['last_size'] = current_size
+
+    # BG - cached
+    if _draw_cache.get('bg_tex'):
+        bg_tex_id, bw, bh = _draw_cache['bg_tex']
+        glEnable(GL_TEXTURE_2D)
+        glBindTexture(GL_TEXTURE_2D, bg_tex_id)
+        glColor4f(1, 1, 1, 1)
+        glBegin(GL_QUADS)
+        glTexCoord2f(0, 1); glVertex2f(0, 0)
+        glTexCoord2f(1, 1); glVertex2f(width, 0)
+        glTexCoord2f(1, 0); glVertex2f(width, height)
+        glTexCoord2f(0, 0); glVertex2f(0, height)
+        glEnd()
+        glBindTexture(GL_TEXTURE_2D, 0)
 
     board_size = len(board)
     header_height = int(height * 0.12)
@@ -114,14 +180,39 @@ def draw_board_gl(board, tiles, score, high_score, font, score_font, game_over, 
     offset_x = (width - board_pixel_width) // 2
     offset_y = header_height + ((height - header_height) - board_pixel_height) // 2
 
+    local_score_font = score_font if score_font is not None else _draw_cache['score_font']
+    local_title_font = font if font is not None else _draw_cache['title_font']
+
+    # Titulo
+    sizes_local = calculate_responsive_sizes(width, height)
+    # top padding
+    top_margin = max(20, int(height * 0.05))
+    title_color = (255, 180, 60)
+    title_surface_text = "BCC2048"
+    if font is not None:
+        title_font_to_use = font
+    else:
+        base_font = _draw_cache.get('title_font')
+        if base_font:
+            base_linesize = base_font.get_linesize()
+            title_font_size = max(24, int(base_linesize * 1.5))
+        else:
+            title_font_size = max(24, int(sizes_local['title_font_size'] * 1.5))
+        title_font_to_use = pygame.font.SysFont("Arial", title_font_size, bold=True)
+
+    tex_title_id, twt, tht, surft = get_text_texture(title_surface_text, title_font_to_use, title_color)
+    title_x = offset_x
+    title_y = top_margin
+    draw_textured_quad(title_x, title_y, twt, tht, tex_title_id)
+
     score_text = f"Pontos: {score}"
-    tex_id, tw, th, surf = get_text_texture(score_text, score_font, (255,255,255))
+    tex_id, tw, th, surf = get_text_texture(score_text, local_score_font, (255,255,255))
     score_x = offset_x
-    score_y = 10
+    score_y = title_y + tht + max(6, int(height * 0.01))
     draw_textured_quad(score_x, score_y, tw, th, tex_id)
 
     high_text = f"Recorde: {high_score}"
-    tex_id2, tw2, th2, surf2 = get_text_texture(high_text, score_font, (255,215,0))
+    tex_id2, tw2, th2, surf2 = get_text_texture(high_text, local_score_font, (255,215,0))
     draw_textured_quad(score_x + tw + 20, score_y, tw2, th2, tex_id2)
 
     music_button_rect = None
