@@ -1,5 +1,5 @@
 import pygame
-from settings import TILE_SIZE, HEADER_HEIGHT, COLORS, MAX_FONT_SIZE, MIN_FONT_SIZE
+from settings import COLORS, MAX_FONT_SIZE, MIN_FONT_SIZE, COLOR_TOP, COLOR_BOTTOM
 
 font_cache = {}
 surface_cache = {}
@@ -53,7 +53,17 @@ def draw_grid(screen, board):
             pygame.draw.rect(screen, (0, 0, 0), rect, 2)
 
 def draw_board(screen, board, tiles, score, font, score_font, game_over, music_on, icon_on, icon_off, icon_restart):
-    screen.fill((30, 30, 30))
+    # Full responsive draw: compute sizes and fonts from current screen size
+    width, height = screen.get_size()
+    # Draw background gradient using project colors
+    gradient = pygame.Surface((width, height))
+    for y in range(height):
+        ratio = y / max(1, height)
+        r = int(COLOR_TOP[0] * (1 - ratio) + COLOR_BOTTOM[0] * ratio)
+        g = int(COLOR_TOP[1] * (1 - ratio) + COLOR_BOTTOM[1] * ratio)
+        b = int(COLOR_TOP[2] * (1 - ratio) + COLOR_BOTTOM[2] * ratio)
+        pygame.draw.line(gradient, (r, g, b), (0, y), (width, y))
+    screen.blit(gradient, (0, 0))
 
     width, height = screen.get_size()
     board_size = len(board)
@@ -66,12 +76,26 @@ def draw_board(screen, board, tiles, score, font, score_font, game_over, music_o
     offset_x = (width - board_pixel_width) // 2
     offset_y = header_height + ((height - header_height) - board_pixel_height) // 2
 
-    # Score
+    # Dynamically create fonts if not provided so text scales with window
+    if score_font is None:
+        score_font_size = max(14, min(48, tile_size // 3))
+        score_font = pygame.font.SysFont("Arial", score_font_size, bold=True)
+    if font is None:
+        font_size = max(12, min(36, tile_size // 4))
+        font = pygame.font.SysFont("Arial", font_size, bold=True)
+
+    # Title (left-aligned above score) and Score
+    top_margin = max(10, int(height * 0.03))  # distância da parte superior
+    title_color = (255, 180, 60)  # laranja
+    title_surface = score_font.render("BCC2048", True, title_color)
+    title_x = offset_x
+    title_y = top_margin
+    screen.blit(title_surface, (title_x, title_y))
+
     score_text = score_font.render(f"Pontos: {score}", True, (255, 255, 255))
     score_x = offset_x
-    score_y = offset_y - score_text.get_height() - 10
-    if score_y < 5:
-        score_y = 5
+    # Coloca a pontuação logo abaixo do título com pequeno espaçamento
+    score_y = title_y + title_surface.get_height() + max(6, int(height * 0.01))
     screen.blit(score_text, (score_x, score_y))
 
     music_button_rect = None

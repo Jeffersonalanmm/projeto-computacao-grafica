@@ -4,6 +4,10 @@ TILE_SIZE = WINDOW_SIZE // BOARD_SIZE
 FONT_SIZE = 20
 HEADER_HEIGHT = 60
 
+# Background gradient colors (used by menu and board)
+COLOR_TOP = (40, 0, 60)
+COLOR_BOTTOM = (0, 0, 80)
+
 MERGE_RULES = {
     ("IP", "IP"): ("POO", 2),
     ("POO", "POO"): ("AED I", 4),
